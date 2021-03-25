@@ -7,9 +7,9 @@ from PIL import Image
 
 def show_img(processed_img):
     unloader = transforms.Compose([
-        #transforms.Normalize(
-            #mean=[-0.485/0.229, -0.456/0.224 -0.406/0.255],
-            #std=[1/0.229, 1/0.224, 1/0.225]),
+        transforms.Normalize(
+            mean=[-0.485/0.229, -0.456/0.224, -0.406/0.255],
+            std=[1/0.229, 1/0.224, 1/0.225]),
         transforms.ToPILImage()
         ])
     img = unloader(processed_img)
@@ -26,7 +26,7 @@ transform = transforms.Compose([
         std=[0.229, 0.224, 0.225])
     ])
 
-img = Image.open("images\jade.jpg")
-img = transform(img)
-show_img(img)
-#show_img(img)
+content_img = Image.open("images\jade.jpg")
+content_img = transform(content_img)
+noise_img = torch.randn(content_img.data.size())
+show_img(noise_img)
