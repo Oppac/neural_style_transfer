@@ -19,7 +19,7 @@ def show_img(processed_img):
             std=[1/0.229, 1/0.224, 1/0.225]),
         transforms.ToPILImage()
         ])
-    img = unloader(processed_img)
+    img = unloader(processed_img.squeeze(0))
     plt.imshow(img)
     plt.show()
 
@@ -36,8 +36,8 @@ if __name__ == "__main__":
         ])
 
     content_img = Image.open("images\jade.jpg")
-    content_img = transform(content_img)
+    content_img = transform(content_img).unsqueeze(0)
     noise_img = torch.randn(content_img.data.size())
 
     vgg = nst_vgg.Vgg19Nst()
-    #print(vgg)
+    #vgg(content_img)
