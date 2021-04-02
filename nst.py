@@ -39,15 +39,15 @@ if __name__ == "__main__":
     #show_img(target_img)
 
     model = nst_vgg.Vgg19Nst().to(device).eval()
-    content_rep = model(content_img).squeeze(axis=0)
+    content_rep = model(content_img)
     optimizer = torch.optim.LBFGS([target_img], max_iter=100)
 
     def closure():
         optimizer.zero_grad()
-        target_rep = model(target_img).squeeze(axis=0)
+        target_rep = model(target_img)
         loss = content_loss(target_rep, content_rep)
         loss.backward()
-        print(model.weight.grad())
+        print(f"loss: {loss}")
         return loss
 
     optimizer.step(closure)
