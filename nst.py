@@ -1,16 +1,10 @@
 import matplotlib.pyplot as plt
 import torch
-import torch.optim as optim
 import torchvision
 from torchvision import models, transforms
 from PIL import Image
 
 import nst_vgg
-
-## TODO: Pretrained normalization + Avg pooling
-# TODO: From noise to content image
-
-
 
 def show_img(processed_img):
     unloader = transforms.Compose([
@@ -23,9 +17,12 @@ def show_img(processed_img):
     plt.imshow(img)
     plt.show()
 
+def content_loss(target_features, content_features):
+    return torch.nn.MSELoss(reduction='mean')(target_features, content_features)
+
 if __name__ == "__main__":
 
-    vgg19 = models.vgg19(pretrained=True)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform = transforms.Compose([
         transforms.Resize(256),
@@ -36,8 +33,25 @@ if __name__ == "__main__":
         ])
 
     content_img = Image.open("images\jade.jpg")
-    content_img = transform(content_img).unsqueeze(0)
-    noise_img = torch.randn(content_img.data.size())
+    content_img = transform(content_img).unsqueeze(0).to(device)
+    target_img = torch.randn(content_img.data.size()).to(device)
+    target_img = torch.autograd.Variable(target_img, requires_grad=True)
+    #show_img(target_img)
 
-    vgg = nst_vgg.Vgg19Nst()
-    #vgg(content_img)
+    model = nst_vgg.Vgg19Nst().to(device).eval()
+    content_rep = model(content_img).squeeze(axis=0)
+    optimizer = torch.optim.LBFGS([target_img], max_iter=100)
+
+    def closure():
+        optimizer.zero_grad()
+        target_rep = model(target_img).squeeze(axis=0)
+        loss = content_loss(target_rep, content_rep)
+        loss.backward()
+        print(model.weight.grad())
+        return loss
+
+    optimizer.step(closure)
+
+    show_img(target_img)
+
+    #print(content_loss(content_f, target_f))

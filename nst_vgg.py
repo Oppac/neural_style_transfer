@@ -34,5 +34,4 @@ class Vgg19Nst(torch.nn.Module):
             name = self.layers[i]
             layer = getattr(self.model, name)
             x = layer(x)
-            if self.layers[i] == 'conv4_2':
-                pass#print(x)
+        return self.model.relu4_2(x)
