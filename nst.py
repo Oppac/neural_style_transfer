@@ -17,9 +17,6 @@ def show_img(processed_img):
     plt.imshow(img)
     plt.show()
 
-def content_loss(target_features, content_features):
-    return torch.nn.MSELoss(reduction='mean')(target_features, content_features)
-
 if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -34,24 +31,20 @@ if __name__ == "__main__":
 
     content_img = Image.open("images\jade.jpg")
     content_img = transform(content_img).unsqueeze(0).to(device)
-    target_img = torch.randn(content_img.data.size()).to(device)
-    target_img = torch.autograd.Variable(target_img, requires_grad=True)
+    target_img = torch.randn_like(content_img).requires_grad_(True).to(device)
     #show_img(target_img)
 
     model = nst_vgg.Vgg19Nst().to(device).eval()
-    content_rep = model(content_img)
-    optimizer = torch.optim.LBFGS([target_img], max_iter=100)
+    optimizer = torch.optim.Adam([target_img], lr=0.01)
+    mse_loss = torch.nn.MSELoss(reduction='mean')
 
-    def closure():
+    for i in range(1, 1000):
         optimizer.zero_grad()
-        target_rep = model(target_img)
-        loss = content_loss(target_rep, content_rep)
-        loss.backward()
-        print(f"loss: {loss}")
-        return loss
+        loss = mse_loss(model(content_img)['conv4_2'], model(target_img)['conv4_2'])
+        loss.backward(retain_graph=True)
+        optimizer.step()
 
-    optimizer.step(closure)
+        if i%50 == 0:
+            print(loss)
 
     show_img(target_img)
-
-    #print(content_loss(content_f, target_f))
