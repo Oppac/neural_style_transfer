@@ -32,6 +32,15 @@ def gram_matrix(tensor):
 
 if __name__ == "__main__":
 
+    content_img_path = "images\jade.jpg"
+    style_img_path = "images\starry_night.jpg"
+    output_name = "starry_jade"
+
+    nb_epoch = 30
+    content_weights = 1
+    style_weights = 10
+    random_init = False
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform = transforms.Compose([
@@ -42,14 +51,16 @@ if __name__ == "__main__":
             std=[0.229, 0.224, 0.225]
         )])
 
-    content_img = Image.open("images\jade.jpg")
+    content_img = Image.open(content_img_path)
     content_img = transform(content_img).unsqueeze(0).to(device)
 
-    style_img = Image.open("images\dark.jpg")
+    style_img = Image.open(style_img_path)
     style_img = transform(style_img).unsqueeze(0).to(device)
 
-    output_img = torch.randn_like(content_img).requires_grad_(True).to(device)
-    #output_img = content_img.clone().requires_grad_(True).to(device)
+    if random_init:
+        output_img = torch.randn_like(content_img).requires_grad_(True).to(device)
+    else:
+        output_img = content_img.clone().requires_grad_(True).to(device)
 
     model = nst_vgg.Vgg19Nst().to(device).eval()
     content_maps = model(content_img)
@@ -65,15 +76,13 @@ if __name__ == "__main__":
     mse_loss_style = torch.nn.MSELoss(reduction='sum')
 
     run = 0
-    while run <= 450:
+    while run <= nb_epoch:
         def closure():
             global run
             optimizer.zero_grad()
 
             content_loss = 0
-            content_weights = 1
             style_loss = 0
-            style_weights = 100
             output_rep = model(output_img)
 
             for name in content_layers:
@@ -96,4 +105,4 @@ if __name__ == "__main__":
         optimizer.step(closure)
 
     output_img.data.clamp_(-1.5, 1.5)
-    show_img(output_img, save=True, name="d5")
+    show_img(output_img, save=True, name=output_name)
