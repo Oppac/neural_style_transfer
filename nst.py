@@ -7,7 +7,7 @@ from torchvision import models, transforms
 
 import nst_vgg
 
-def show_img(processed_img, denorm=True):
+def show_img(processed_img, denorm=True, show=True, save=False, name="img"):
     if denorm:
         unloader = transforms.Compose([
             transforms.Normalize(
@@ -18,35 +18,38 @@ def show_img(processed_img, denorm=True):
     else:
         unloader = transforms.ToPILImage()
     img = unloader(processed_img.squeeze(0))
-    plt.imshow(img)
-    plt.show()
+    if save:
+        img.save(f"images\{name}.jpg")
+    if show:
+        plt.imshow(img)
+        plt.show()
 
 def gram_matrix(tensor):
     _, channels, height, width = tensor.size()
     tensor = tensor.view(channels, height * width)
     gram = torch.mm(tensor, tensor.t())
-    return gram
+    return gram / (channels * height * width)
 
 if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform = transforms.Compose([
-        transforms.Resize((400, 400)),
+        transforms.Resize((512, 512)),
         transforms.ToTensor(),
         transforms.Normalize(
             mean=[0.485, 0.456, 0.406],
             std=[0.229, 0.224, 0.225]
         )])
 
-    content_img = Image.open("images\candy.jpg")
+    content_img = Image.open("images\jade.jpg")
     content_img = transform(content_img).unsqueeze(0).to(device)
 
-    style_img = Image.open("images\\ny.jpg")
+    style_img = Image.open("images\dark.jpg")
     style_img = transform(style_img).unsqueeze(0).to(device)
 
-    #output_img = torch.randn_like(content_img).requires_grad_(True).to(device)
-    output_img = content_img.clone().requires_grad_(True).to(device)
+    output_img = torch.randn_like(content_img).requires_grad_(True).to(device)
+    #output_img = content_img.clone().requires_grad_(True).to(device)
 
     model = nst_vgg.Vgg19Nst().to(device).eval()
     content_maps = model(content_img)
@@ -62,7 +65,7 @@ if __name__ == "__main__":
     mse_loss_style = torch.nn.MSELoss(reduction='sum')
 
     run = 0
-    while run <= 3:
+    while run <= 450:
         def closure():
             global run
             optimizer.zero_grad()
@@ -70,7 +73,7 @@ if __name__ == "__main__":
             content_loss = 0
             content_weights = 1
             style_loss = 0
-            style_weights = 1
+            style_weights = 100
             output_rep = model(output_img)
 
             for name in content_layers:
@@ -86,12 +89,11 @@ if __name__ == "__main__":
             total_loss.backward()
 
             if run%5 == 0:
-                print(f"total_loss: {total_loss} | content_loss: {content_weights * content_loss} | style_loss: {style_weights * style_loss}")
-
+                print(f" {run} | total_loss: {total_loss} | content_loss: {content_weights * content_loss} | style_loss: {style_weights * style_loss}")
             run += 1
             return total_loss
 
         optimizer.step(closure)
 
     output_img.data.clamp_(-1.5, 1.5)
-    show_img(output_img)
+    show_img(output_img, save=True, name="d5")
