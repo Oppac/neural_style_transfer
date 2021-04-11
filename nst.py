@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import os
 from PIL import Image
 
 import torch
@@ -7,7 +8,7 @@ from torchvision import models, transforms
 
 import nst_vgg
 
-def show_img(processed_img, denorm=True, show=True, save=False, name="img"):
+def show_img(processed_img, denorm=True, show=False, save=False, name="img"):
     if denorm:
         unloader = transforms.Compose([
             transforms.Normalize(
@@ -19,6 +20,8 @@ def show_img(processed_img, denorm=True, show=True, save=False, name="img"):
         unloader = transforms.ToPILImage()
     img = unloader(processed_img.squeeze(0))
     if save:
+        if not os.path.exists(r".\images"):
+            os.makedirs(r".\images")
         img.save(f"images\{name}.jpg")
     if show:
         plt.imshow(img)
@@ -34,12 +37,15 @@ if __name__ == "__main__":
 
     content_img_path = "images\jade.jpg"
     style_img_path = "images\starry_night.jpg"
-    output_name = "starry_jade"
+    output_name = "jade_output"
 
-    nb_epoch = 30
+    nb_epoch = 100
     content_weights = 1
-    style_weights = 10
+    style_weights = 100
     random_init = False
+
+    content_layers = ['conv4_2']
+    style_layers =['conv1_1', 'conv2_1', 'conv3_1', 'conv4_1', 'conv5_1']
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -62,12 +68,11 @@ if __name__ == "__main__":
     else:
         output_img = content_img.clone().requires_grad_(True).to(device)
 
-    model = nst_vgg.Vgg19Nst().to(device).eval()
+    layers_used = content_layers + style_layers
+    model = nst_vgg.Vgg19Nst(features=layers_used).to(device).eval()
     content_maps = model(content_img)
     style_maps = model(style_img)
 
-    content_layers = ['conv4_2']
-    style_layers = ['conv1_1', 'conv2_1', 'conv3_1', 'conv4_1', 'conv5_1']
     content_rep = {layer: content_maps[layer].squeeze(axis=0) for layer in content_layers}
     style_grams = {layer: gram_matrix(style_maps[layer]) for layer in style_layers}
 
